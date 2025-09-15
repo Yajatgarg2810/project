@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Sleep Prediction{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg">
+                <div class="card-header gradient-bg text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-moon me-2"></i>Sleep Disorder Prediction</h2>
+                        <a href="{{ url_for('home') }}" class="btn btn-sm btn-light">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4 p-lg-5">
+                    <div class="text-center mb-4">
+                        <img src="https://img.icons8.com/color/96/000000/sleeping-in-bed.png" alt="Sleep" class="mb-3" style="width: 80px;">
+                        <p class="lead text-muted">Enter your lifestyle information to assess your sleep health</p>
+                    </div>
+                    
+                    <form id="predictionForm" action="/result" method="post" class="needs-validation" novalidate>
+                        <!-- Age Field -->
+                        <div class="mb-4">
+                            <label for="age" class="form-label fw-bold">Your Age</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-clock"></i></span>
+                                <input type="number" class="form-control" id="age" name="age" 
+                                       min="18" max="100" required>
+                                <span class="input-group-text">years</span>
+                            </div>
+                            <div class="form-text">Enter your age between 18 and 100</div>
+                            <div class="invalid-feedback">Please provide a valid age.</div>
+                        </div>
+                        
+                        <!-- Sleep Duration Field with Range Slider -->
+                        <div class="mb-4">
+                            <label for="sleep_duration" class="form-label fw-bold">
+                                Average Sleep Duration: <span id="sleepValue">7.0</span> hours
+                            </label>
+                            <input type="range" class="form-range" id="sleep_duration" name="sleep_duration" 
+                                   min="3" max="12" step="0.1" value="7.0" required>
+                            <div class="d-flex justify-content-between">
+                                <small>3h</small>
+                                <small>12h</small>
+                            </div>
+                            <div class="invalid-feedback">Please select your average sleep duration.</div>
+                        </div>
+                        
+                        <!-- Stress Level Field with Visual Rating -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Stress Level</label>
+                            <div class="d-flex justify-content-between mb-2">
+                                <small>Low</small>
+                                <small>High</small>
+                            </div>
+                            <div class="btn-group w-100" role="group" id="stressLevelGroup">
+                                {% for i in range(1, 11) %}
+                                <input type="radio" class="btn-check" name="stress_level" id="stress{{i}}" 
+                                       value="{{i}}" {% if i==5 %}checked{% endif %} required>
+                                <label class="btn btn-outline-primary" for="stress{{i}}">{{i}}</label>
+                                {% endfor %}
+                            </div>
+                            <div class="invalid-feedback">Please select your stress level.</div>
+                        </div>
+                        
+                        <!-- Physical Activity Field -->
+                        <div class="mb-4">
+                            <label for="physical_activity" class="form-label fw-bold">
+                                Daily Physical Activity: <span id="activityValue">30</span> minutes
+                            </label>
+                            <input type="range" class="form-range" id="physical_activity" name="physical_activity" 
+                                   min="0" max="120" step="5" value="30" required>
+                            <div class="d-flex justify-content-between">
+                                <small>0 min</small>
+                                <small>120 min</small>
+                            </div>
+                            <div class="invalid-feedback">Please select your activity level.</div>
+                        </div>
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                                <i class="fas fa-chart-bar me-2"></i> Analyze My Sleep
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Information Card -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-info-circle text-primary me-2"></i>About This Assessment</h5>
+                    <p class="card-text">
+                        This prediction analyzes your lifestyle factors that may contribute to sleep disorders. 
+                        The model considers your age, sleep duration, stress levels, and physical activity 
+                        to assess potential risks for conditions like insomnia or sleep apnea.
+                    </p>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>Tip:</strong> For best results, provide accurate information about your typical daily routine.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Real-time display for range sliders
+    document.getElementById('sleep_duration').addEventListener('input', function() {
+        document.getElementById('sleepValue').textContent = this.value;
+    });
+    
+    document.getElementById('physical_activity').addEventListener('input', function() {
+        document.getElementById('activityValue').textContent = this.value;
+    });
+    
+    // Form validation
+    (function() {
+        'use strict';
+        
+        const form = document.getElementById('predictionForm');
+        
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            form.classList.add('was-validated');
+        }, false);
+        
+        // Custom validation for stress level
+        const stressGroup = document.getElementById('stressLevelGroup');
+        const stressRadios = stressGroup.querySelectorAll('input[type="radio"]');
+        
+        stressGroup.addEventListener('change', function() {
+            let checked = false;
+            stressRadios.forEach(radio => {
+                if (radio.checked) checked = true;
+            });
+            
+            if (checked) {
+                stressGroup.classList.remove('is-invalid');
+            }
+        });
+    })();
+    
+    // Animate form elements on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const formElements = document.querySelectorAll('#predictionForm .mb-4');
+        formElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, index * 150);
+        });
+    });
+</script>
+{% endblock %}
+
+<style>
+    /* Form animations */
+    #predictionForm .mb-4 {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.5s ease;
+    }
+    
+    /* Custom styling for stress level buttons */
+    #stressLevelGroup .btn {
+        flex: 1;
+        padding: 0.5rem;
+    }
+    
+    #stressLevelGroup .btn:hover {
+        background-color: rgba(79, 70, 229, 0.1);
+    }
+    
+    #stressLevelGroup input[type="radio"]:checked + label {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    
+    /* Custom range slider */
+    .form-range::-webkit-slider-thumb {
+        background: var(--primary-color);
+        width: 20px;
+        height: 20px;
+    }
+    
+    .form-range::-moz-range-thumb {
+        background: var(--primary-color);
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 576px) {
+        #stressLevelGroup .btn {
+            padding: 0.25rem;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction Results{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg overflow-hidden">
+                <!-- Card Header with Animated Background -->
+                <div class="card-header position-relative gradient-bg text-white py-4">
+                    <div class="position-absolute top-0 end-0 w-100 h-100 opacity-10">
+                        <div class="w-100 h-100" style="background-image: url('https://img.icons8.com/ios/100/000000/sleep.png'); 
+                                  background-repeat: no-repeat;
+                                  background-position: right center;
+                                  background-size: 80px;"></div>
+                    </div>
+                    <div class="position-relative">
+                        <h2 class="mb-0"><i class="fas fa-chart-line me-2"></i>Your Sleep Analysis</h2>
+                    </div>
+                </div>
+                
+                <!-- Result Card Body -->
+                <div class="card-body p-0">
+                    <div class="p-4 p-lg-5">
+                        <div class="text-center mb-4">
+                            <div class="icon-xl rounded-circle bg-primary bg-opacity-10 text-primary mb-3 mx-auto">
+                                {% if prediction == "No Disorder" %}
+                                <i class="fas fa-thumbs-up"></i>
+                                {% else %}
+                                <i class="fas fa-exclamation-triangle"></i>
+                                {% endif %}
+                            </div>
+                            <h3 class="h4">Prediction Result</h3>
+                        </div>
+                        
+                        <!-- Main Result Display -->
+                        <div class="alert {% if prediction == 'No Disorder' %}alert-success{% else %}alert-warning{% endif %} 
+                                    text-center py-3 mb-4" style="border-left: 4px solid {% if prediction == 'No Disorder' %}#28a745{% else %}#ffc107{% endif %};">
+                            <h4 class="alert-heading mb-2">
+                                {% if prediction == "No Disorder" %}
+                                Healthy Sleep Patterns
+                                {% else %}
+                                Potential Sleep Disorder Detected
+                                {% endif %}
+                            </h4>
+                            <p class="mb-0 fw-bold fs-5">{{ prediction }}</p>
+                        </div>
+                        
+                        <!-- Detailed Explanation -->
+                        <div class="mb-4">
+                            <h5 class="d-flex align-items-center mb-3">
+                                <span class="badge bg-primary me-2"><i class="fas fa-info-circle"></i></span>
+                                What This Means
+                            </h5>
+                            <div class="ps-4">
+                                {% if prediction == "No Disorder" %}
+                                <p>Your lifestyle factors suggest healthy sleep patterns. Keep maintaining good sleep habits!</p>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Your sleep duration appears adequate</li>
+                                    <li class="mb-2"><i class="fas fa-check-circle text-success me-2"></i>Your stress levels are manageable</li>
+                                    <li><i class="fas fa-check-circle text-success me-2"></i>Your physical activity supports good sleep</li>
+                                </ul>
+                                {% else %}
+                                <p>Your responses indicate possible sleep issues that may require attention.</p>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i>{{ prediction }} can affect your daily functioning</li>
+                                    <li class="mb-2"><i class="fas fa-exclamation-circle text-warning me-2"></i>Consider consulting a sleep specialist</li>
+                                    <li><i class="fas fa-exclamation-circle text-warning me-2"></i>Our chatbot can provide initial guidance</li>
+                                </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Next Steps -->
+                        <div class="card bg-light border-0 mb-4">
+                            <div class="card-body">
+                                <h5 class="d-flex align-items-center mb-3">
+                                    <span class="badge bg-primary me-2"><i class="fas fa-arrow-right"></i></span>
+                                    Recommended Next Steps
+                                </h5>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="p-3 bg-white rounded h-100">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="icon-sm bg-primary bg-opacity-10 text-primary rounded-circle me-3">
+                                                    <i class="fas fa-comment-medical"></i>
+                                                </div>
+                                                <h6 class="mb-0">Chat with Sleep Bot</h6>
+                                            </div>
+                                            <p class="small text-muted mb-0">Get personalized advice from our AI sleep expert</p>
+                                            <a href="{{ url_for('chatbot') }}" class="stretched-link"></a>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 bg-white rounded h-100">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="icon-sm bg-primary bg-opacity-10 text-primary rounded-circle me-3">
+                                                    <i class="fas fa-book"></i>
+                                                </div>
+                                                <h6 class="mb-0">Sleep Resources</h6>
+                                            </div>
+                                            <p class="small text-muted mb-0">Learn more about improving your sleep quality</p>
+                                            <a href="#" class="stretched-link"></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Visual Chart Section -->
+                    <div class="px-4 px-lg-5 pb-4 pb-lg-5">
+                        <div class="border-top pt-4">
+                            <h5 class="d-flex align-items-center mb-3">
+                                <span class="badge bg-primary me-2"><i class="fas fa-chart-pie"></i></span>
+                                Your Sleep Health Score
+                            </h5>
+                            <div class="progress mb-3" style="height: 30px;">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated 
+                                            {% if prediction == 'No Disorder' %}bg-success{% else %}bg-warning{% endif %}" 
+                                     role="progressbar" style="width: {% if prediction == 'No Disorder' %}85{% else %}45{% endif %}%" 
+                                     aria-valuenow="{% if prediction == 'No Disorder' %}85{% else %}45{% endif %}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    {% if prediction == "No Disorder" %}85%{% else %}45%{% endif %}
+                                </div>
+                            </div>
+                            <p class="small text-muted mb-0">
+                                This score is based on your input data compared to healthy sleep benchmarks.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Footer with Actions -->
+                <div class="card-footer bg-white border-0 py-3">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between">
+                        <a href="{{ url_for('predict') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-redo me-2"></i>Try Again
+                        </a>
+                        <a href="{{ url_for('home') }}" class="btn btn-primary">
+                            <i class="fas fa-home me-2"></i>Return Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Disclaimer -->
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-body">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 text-warning me-2">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Important Disclaimer</h6>
+                            <p class="small text-muted mb-0">
+                                This prediction is for informational purposes only and not a substitute for professional medical advice. 
+                                Always consult with a healthcare provider for sleep-related concerns.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Animation for the progress bar
+    document.addEventListener('DOMContentLoaded', function() {
+        const progressBar = document.querySelector('.progress-bar');
+        progressBar.style.width = '0%';
+        
+        setTimeout(() => {
+            progressBar.style.width = progressBar.getAttribute('aria-valuenow') + '%';
+        }, 300);
+        
+        // Animate elements sequentially
+        const elements = document.querySelectorAll('.card-body > div, .card-footer');
+        elements.forEach((el, index) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            el.style.transition = 'all 0.5s ease';
+            
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, index * 200 + 300);
+        });
+    });
+</script>
+{% endblock %}
+
+<style>
+    .icon-xl {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+    }
+    
+    .icon-sm {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+    }
+    
+    .progress-bar {
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: width 1.5s ease-in-out;
+    }
+    
+    /* Custom alert styling */
+    .alert {
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Card hover effects for next steps */
+    .card-body .bg-white {
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .card-body .bg-white:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Sleep Chatbot{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow">
+                <div class="card-header gradient-bg text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0"><i class="fas fa-robot me-2"></i> Sleep Expert Bot</h4>
+                        <a href="{{ url_for('home') }}" class="btn btn-sm btn-light">
+                            <i class="fas fa-arrow-left me-1"></i> Back
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
+                    <div id="chat-container" class="p-4" style="height: 500px; overflow-y: auto;">
+                        <div class="chat-message bot-message mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="bg-light rounded p-3">
+                                        Hello! I'm here to help with your sleep-related questions. How can I assist you today?
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Just now</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if user_message %}
+                        <div class="chat-message user-message mb-3">
+                            <div class="d-flex align-items-start justify-content-end">
+                                <div class="flex-grow-1 me-3 text-end">
+                                    <div class="bg-primary text-white rounded p-3">
+                                        {{ user_message }}
+                                    </div>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-sm bg-primary text-white rounded-circle">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-message bot-message mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="flex-shrink-0">
+                                    <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle">
+                                        <i class="fas fa-robot"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="bg-light rounded p-3">
+                                        {{ bot_response }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="p-3 border-top">
+                        <form method="POST" id="chat-form" class="d-flex">
+                            <input type="text" name="message" class="form-control rounded-pill me-2" 
+                                   placeholder="Type your message..." required>
+                            <button type="submit" class="btn btn-primary rounded-circle" style="width: 45px; height: 45px;">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Auto-scroll to bottom of chat
+    const chatContainer = document.getElementById('chat-container');
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // Handle form submission with AJAX for better UX
+    document.getElementById('chat-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = this;
+        const messageInput = form.querySelector('input[name="message"]');
+        const message = messageInput.value.trim();
+        
+        if (message) {
+            // Add user message to chat immediately
+            const userMessageHTML = `
+                <div class="chat-message user-message mb-3">
+                    <div class="d-flex align-items-start justify-content-end">
+                        <div class="flex-grow-1 me-3 text-end">
+                            <div class="bg-primary text-white rounded p-3">
+                                ${message}
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <div class="avatar-sm bg-primary text-white rounded-circle">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatContainer.insertAdjacentHTML('beforeend', userMessageHTML);
+            
+            // Add loading indicator for bot response
+            const loadingHTML = `
+                <div class="chat-message bot-message mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-shrink-0">
+                            <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="bg-light rounded p-3">
+                                <div class="d-flex justify-content-center">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatContainer.insertAdjacentHTML('beforeend', loadingHTML);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Submit form via AJAX
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove loading indicator
+                chatContainer.removeChild(chatContainer.lastChild);
+                
+                // Add bot response
+                const botMessageHTML = `
+                    <div class="chat-message bot-message mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <div class="avatar-sm bg-primary bg-opacity-10 text-primary rounded-circle">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="bg-light rounded p-3">
+                                    ${data.bot_response}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatContainer.insertAdjacentHTML('beforeend', botMessageHTML);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Remove loading indicator
+                chatContainer.removeChild(chatContainer.lastChild);
+                
+                // Show error message
+                const errorHTML = `
+                    <div class="chat-message bot-message mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="flex-shrink-0">
+                                <div class="avatar-sm bg-danger bg-opacity-10 text-danger rounded-circle">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="bg-light rounded p-3 text-danger">
+                                    Sorry, there was an error processing your request. Please try again.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatContainer.insertAdjacentHTML('beforeend', errorHTML);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            });
+            
+            // Reset form
+            messageInput.value = '';
+        }
+    });
+</script>
+{% endblock %}
+
+<style>
+    .avatar-sm {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .chat-message {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
