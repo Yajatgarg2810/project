@@ -81,9 +81,10 @@ def create_admin():
         password = generate_password_hash("admin123")
         cur.execute(
             "INSERT INTO users (email, username, password, is_admin) VALUES (?, ?, ?, 1)",
-            ("admin@example.com", "admin", password)
+            ("admin@gmail.com", "admin", password)
         )
         conn.commit()
+        print("Admin user created: admin@gmail.com.com / admin123")
     conn.close()
 
 # ================== CHATBOT HELPER ==================
@@ -166,24 +167,34 @@ def result():
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email'].strip().lower()
+        # The form field is called 'email' but we use it for both email and username
+        email_or_username = request.form['email'].strip().lower()
         password = request.form['password']
+
+        print(f"Login attempt: {email_or_username}")  # Debug print
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+        # Check by email OR username
+        cur.execute("SELECT * FROM users WHERE email = ? OR username = ?", (email_or_username, email_or_username))
         user = cur.fetchone()
         conn.close()
 
-        if user and check_password_hash(user['password'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['email'] = user['email']
-            session['is_admin'] = user['is_admin']
-            flash('Login successful!', 'success')
-            return redirect(url_for('home'))
+        if user:
+            print(f"User found: {user['email']}")  # Debug print
+            if check_password_hash(user['password'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['email'] = user['email']
+                session['is_admin'] = user['is_admin']
+                flash('Login successful!', 'success')
+                return redirect(url_for('home'))
+            else:
+                print("Password incorrect")  # Debug print
+                flash('Invalid email/username or password.', 'danger')
         else:
-            flash('Invalid email or password.', 'danger')
+            print("User not found")  # Debug print
+            flash('Invalid email/username or password.', 'danger')
 
     return render_template('login.html')
 
@@ -199,7 +210,17 @@ def signup():
     if request.method == 'POST':
         email = request.form['email'].strip().lower()
         username = request.form['username'].strip()
-        password_hash = generate_password_hash(request.form['password'])
+        password = request.form['password']
+        
+        print(f"Signup attempt: {email}, {username}")  # Debug print
+        
+        # Validate password strength
+        if len(password) < 8:
+            flash("Password must be at least 8 characters long", "danger")
+            return render_template('signup.html')
+        
+        password_hash = generate_password_hash(password)
+        print(f"Password hash generated: {password_hash[:20]}...")  # Debug print
 
         try:
             conn = get_db()
@@ -208,10 +229,15 @@ def signup():
                         (email, username, password_hash))
             conn.commit()
             conn.close()
+            print("User created successfully")  # Debug print
             flash("Account created successfully. Please log in.", "success")
             return redirect(url_for('login'))
-        except sqlite3.IntegrityError:
+        except sqlite3.IntegrityError as e:
+            print(f"Integrity error: {e}")  # Debug print
             flash("Email or Username already exists", "danger")
+        except Exception as e:
+            print(f"Other error: {e}")  # Debug print
+            flash("Error creating account", "danger")
     return render_template('signup.html')
 
 @app.route('/forgot_password', methods=['GET', 'POST'])
@@ -223,6 +249,11 @@ def forgot_password():
 
         if new_password != confirm_password:
             flash("Passwords do not match", "danger")
+            return render_template('forgot_password.html')
+        
+        # Validate password strength
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters long", "danger")
             return render_template('forgot_password.html')
 
         conn = get_db()
@@ -243,6 +274,96 @@ def forgot_password():
 
     return render_template('forgot_password.html')
 
+# ================== UPDATE PASSWORD ROUTE ==================
+@app.route('/update_password', methods=['GET', 'POST'])
+def update_password():
+    if 'username' not in session:
+        flash('Please log in to access this page', 'warning')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        user_id = session['user_id']
+        
+        # Validate inputs
+        if new_password != confirm_password:
+            flash("New passwords do not match", "danger")
+            return render_template('update_password.html')
+        
+        if len(new_password) < 8:
+            flash("New password must be at least 8 characters long", "danger")
+            return render_template('update_password.html')
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+        user = cur.fetchone()
+        
+        # Verify current password
+        if user and check_password_hash(user['password'], current_password):
+            hashed_password = generate_password_hash(new_password)
+            cur.execute("UPDATE users SET password = ? WHERE id = ?", (hashed_password, user_id))
+            conn.commit()
+            conn.close()
+            flash("Password updated successfully!", "success")
+            return redirect(url_for('dashboard'))
+        else:
+            conn.close()
+            flash("Current password is incorrect", "danger")
+    
+    return render_template('update_password.html')
+
+# ================== USER MANAGEMENT ROUTES ==================
+@app.route('/view-users')
+def view_users():
+    if 'username' not in session:
+        flash('Please log in to access this page', 'warning')
+        return redirect(url_for('login'))
+    
+    # Optional: Only allow admins to view users
+    if not session.get('is_admin', 0):
+        flash('Access denied. Admin privileges required.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, email, username, is_admin FROM users ORDER BY id")
+    users = cur.fetchall()
+    conn.close()
+    
+    return render_template('view_users.html', users=users)
+
+@app.route('/delete-user/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    if 'username' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+    
+    if not session.get('is_admin', 0):
+        return jsonify({'success': False, 'message': 'Admin privileges required'}), 403
+    
+    # Prevent users from deleting themselves
+    if user_id == session['user_id']:
+        return jsonify({'success': False, 'message': 'Cannot delete your own account'}), 400
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        # First delete related chat history
+        cur.execute("DELETE FROM chat_history WHERE user_id = ?", (user_id,))
+        # Then delete the user
+        cur.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'User deleted successfully'})
+    except Exception as e:
+        conn.close()
+        return jsonify({'success': False, 'message': f'Error deleting user: {str(e)}'}), 500
+    
 @app.route('/dashboard')
 def dashboard():
     if 'username' not in session:
@@ -302,16 +423,30 @@ def chatbot():
 def show_all_users():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, username, is_admin FROM users")
+    cur.execute("SELECT id, username, email, is_admin FROM users")
     rows = cur.fetchall()
     print("\n=== Registered Users ===")
     for row in rows:
-        print(f"ID: {row['id']}, Username: {row['username']}, Admin: {bool(row['is_admin'])}")
+        print(f"ID: {row['id']}, Username: {row['username']}, Email: {row['email']}, Admin: {bool(row['is_admin'])}")
+    conn.close()
+
+# Test password functionality
+def test_password_functionality():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, username, email, password FROM users LIMIT 1")
+    user = cur.fetchone()
+    if user:
+        print(f"\n=== Password Test ===")
+        print(f"User: {user['username']}")
+        print(f"Password hash: {user['password']}")
+        print(f"Hash length: {len(user['password'])}")
     conn.close()
 
 init_db()
 create_admin()
 show_all_users()
+test_password_functionality()
 
 if __name__ == '__main__':
     app.run(debug=True)

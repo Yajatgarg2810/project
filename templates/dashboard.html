@@ -22,6 +22,19 @@
             color: #333;
         }
     </style>
+    <!-- Add this to your dashboard.html -->
+{% if session.get('is_admin', 0) %}
+<div class="col-md-4 mb-4">
+    <div class="card">
+        <div class="card-body text-center">
+            <i class="fas fa-users fa-3x text-primary mb-3"></i>
+            <h5>User Management</h5>
+            <p>View and manage all registered users</p>
+            <a href="{{ url_for('view_users') }}" class="btn btn-outline-primary">View Users</a>
+        </div>
+    </div>
+</div>
+{% endif %}
 </head>
 <body>
     <div class="container">

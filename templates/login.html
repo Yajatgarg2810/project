@@ -31,6 +31,24 @@
         .input-group-text {
             background-color: #f8f9fa;
         }
+        .shake {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% {transform: translateX(0);}
+            10%, 30%, 50%, 70%, 90% {transform: translateX(-5px);}
+            20%, 40%, 60%, 80% {transform: translateX(5px);}
+        }
+        .is-invalid {
+            border-color: #dc3545 !important;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+        }
+        .field-error {
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -44,9 +62,21 @@
                         <p class="text-muted">Sign in to continue</p>
                     </div>
                     
-                    <!-- Simulated flash messages for demonstration -->
+                    <!-- Flash messages from server -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <!-- Validation error alert -->
                     <div class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;" id="errorAlert">
-                        Invalid username or password
+                        <span id="errorMessage">Please fill in all required fields</span>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                     
@@ -55,25 +85,20 @@
                             <label for="email" class="form-label">Email</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-envelope"></i></span>
-                                <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" required>
+                                <input type="email" class="form-control" id="email" name="email" required>
                             </div>
-                        <div class="mb-3">
-                            <label for="username" class="fcorm-label">Username</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required>
-                            </div>
+                            <div class="field-error" id="emailError"></div>
                         </div>
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required>
+                                <input type="password" class="form-control" id="password" name="password" required>
                                 <button class="btn btn-outline-secondary" type="button" id="togglePassword">
                                     <i class="fas fa-eye"></i>
                                 </button>
                             </div>
-                        </div>
+                            <div class="field-error" id="passwordError"></div>
                         </div>
                         <div class="d-grid gap-2 mb-3">
                             <button type="submit" class="btn btn-primary btn-lg">Login</button>
@@ -106,34 +131,107 @@
         }
     });
 
+    // Email validation function
+    function isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
     // Form validation
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-        const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
         const email = document.getElementById('email').value.trim();
+        const errorAlert = document.getElementById('errorAlert');
+        const errorMessage = document.getElementById('errorMessage');
         
-        if (!username || !password || !email) {
+        // Reset previous states
+        document.getElementById('password').classList.remove('is-invalid', 'shake');
+        document.getElementById('email').classList.remove('is-invalid', 'shake');
+        
+        // Hide individual error messages
+        document.getElementById('emailError').style.display = 'none';
+        document.getElementById('passwordError').style.display = 'none';
+        
+        errorAlert.style.display = 'none';
+        
+        let hasError = false;
+        let specificErrorMessage = '';
+        
+        // Check each field individually with priority
+        if (!email) {
+            const emailField = document.getElementById('email');
+            emailField.classList.add('is-invalid', 'shake');
+            document.getElementById('emailError').textContent = 'Email is required';
+            document.getElementById('emailError').style.display = 'block';
+            specificErrorMessage = 'Please enter your email address';
+            hasError = true;
+        } else if (!isValidEmail(email)) {
+            const emailField = document.getElementById('email');
+            emailField.classList.add('is-invalid', 'shake');
+            document.getElementById('emailError').textContent = 'Please enter a valid email address';
+            document.getElementById('emailError').style.display = 'block';
+            specificErrorMessage = 'Please enter a valid email address';
+            hasError = true;
+        } else if (!password) {
+            const passwordField = document.getElementById('password');
+            passwordField.classList.add('is-invalid', 'shake');
+            document.getElementById('passwordError').textContent = 'Password is required';
+            document.getElementById('passwordError').style.display = 'block';
+            specificErrorMessage = 'Please enter your password';
+            hasError = true;
+        }
+        
+        if (hasError) {
             e.preventDefault();
-            // Show error alert
-            document.getElementById('errorAlert').style.display = 'block';
             
-            // Add shake animation to empty fields
-            if (!username) {
-                document.getElementById('username').classList.add('is-invalid');
-            }
-            if (!password) {
-                document.getElementById('password').classList.add('is-invalid');
-            }
-            if (!email) {
-                document.getElementById('email').classList.add('is-invalid');
-            }
+            // Show specific error message in alert
+            errorMessage.textContent = specificErrorMessage;
+            errorAlert.style.display = 'block';
             
-            // Remove validation classes after a delay
+            // Remove shake animation after it completes
             setTimeout(() => {
-                document.getElementById('username').classList.remove('is-invalid');
+                document.getElementById('password').classList.remove('shake');
+                document.getElementById('email').classList.remove('shake');
+            }, 500);
+            
+            // Remove validation classes after a longer delay (but keep individual error messages)
+            setTimeout(() => {
                 document.getElementById('password').classList.remove('is-invalid');
                 document.getElementById('email').classList.remove('is-invalid');
-            }, 2000);
+            }, 3000);
+        }
+    });
+
+    // Real-time validation as user types
+    document.getElementById('email').addEventListener('blur', function() {
+        const email = this.value.trim();
+        const emailError = document.getElementById('emailError');
+        
+        if (!email) {
+            this.classList.add('is-invalid');
+            emailError.textContent = 'Email is required';
+            emailError.style.display = 'block';
+        } else if (!isValidEmail(email)) {
+            this.classList.add('is-invalid');
+            emailError.textContent = 'Please enter a valid email address';
+            emailError.style.display = 'block';
+        } else {
+            this.classList.remove('is-invalid');
+            emailError.style.display = 'none';
+        }
+    });
+
+    document.getElementById('password').addEventListener('blur', function() {
+        const password = this.value;
+        const passwordError = document.getElementById('passwordError');
+        
+        if (!password) {
+            this.classList.add('is-invalid');
+            passwordError.textContent = 'Password is required';
+            passwordError.style.display = 'block';
+        } else {
+            this.classList.remove('is-invalid');
+            passwordError.style.display = 'none';
         }
     });
 </script>
